@@ -1,4 +1,5 @@
 /video
+/cache
 .devspace/
 .env
 .venv

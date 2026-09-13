@@ -93,6 +93,12 @@ This limit can also be removed by applying an [unofficial patch](https://github.
 
 # FAQ
 
+## Transcoder cache
+
+`CACHE_ROOT` is used for temporary transcoding segments and must point to a disk-backed location with enough free space for concurrent transcodes. Avoid system temporary directories such as `/tmp`: depending on the host and Docker configuration, they may be memory-backed or have a small size limit.
+
+The default `./cache` path is relative to the directory containing `docker-compose.yml`. You can move it to another disk by setting an absolute path in `.env`; for example, `CACHE_ROOT=T:/kyoo_cache` with Docker Desktop on Windows. The cache is temporary and Kyoo automatically removes its contents during startup and runtime.
+
 ## Custom volumes
 
 To customize volumes, you can edit the `docker-compose.yml` manually.
