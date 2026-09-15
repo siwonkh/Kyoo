@@ -5,9 +5,10 @@ from rebulk import Rebulk
 from rebulk.match import Match
 
 from . import rules
+from .localized import localized
 
 default_api.configure({})
-rblk = cast(Rebulk, default_api.rebulk).rules(rules)
+rblk = cast(Rebulk, default_api.rebulk).rebulk(localized()).rules(rules)
 
 
 def guessit(

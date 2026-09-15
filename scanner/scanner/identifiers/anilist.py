@@ -18,6 +18,7 @@ from ..models.metadataid import EpisodeId, MetadataId, SeasonId
 from ..models.serie import Serie
 from ..models.videos import Guess
 from ..providers.names import ProviderName
+from .guess.localized import normalize_cour
 
 logger = getLogger(__name__)
 
@@ -148,6 +149,7 @@ async def get_anilist_data() -> AnimeListData:
 
 
 def normalize_title(title: str) -> str:
+	title = normalize_cour(title)
 	title = unicodedata.normalize("NFD", title)
 	title = "".join(c for c in title if unicodedata.category(c) != "Mn")
 	title = title.lower()

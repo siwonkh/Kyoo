@@ -180,7 +180,7 @@ class MultipleSeasonRule(Rule):
 			return
 
 		value: str = initiator.value  # type: ignore
-		if "-" not in value:
+		if not isinstance(value, str) or "-" not in value:
 			return
 
 		new_season, *new_episodes = (x.strip() for x in value.split("-"))
@@ -412,7 +412,10 @@ class ExpectedTitles(Rule):
 					"".join(f" {h.value}" if h.value != "-" else " - " for h in holes)
 					or " "
 				)
-				mtitle = f"{mtitle}{hole}{m.value}"
+				# Numeric values omit localized words such as `기` and `화`.
+				# Keep those words when checking an anime's complete title alias.
+				value = m.raw if m.tagged("localized") else m.value
+				mtitle = f"{mtitle}{hole}{value}"
 				prev = m
 
 			if normalize_title(mtitle) in context["expected_titles"]:

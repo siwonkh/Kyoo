@@ -131,6 +131,12 @@ jobs:
         with:
           args: format --check
 
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Test filename identification
+        working-directory: ./scanner
+        run: uv run --locked python -m unittest discover -s tests
+
   transcoder:
     name: "Lint transcoder"
     runs-on: ubuntu-latest
