@@ -63,7 +63,31 @@ export const CastButton = (
 	);
 };
 
+type IOSVideoElement = HTMLVideoElement & {
+	webkitEnterFullscreen?: () => void;
+	webkitExitFullscreen?: () => void;
+	webkitDisplayingFullscreen?: boolean;
+};
+
+const iosFullscreenVideo = (): IOSVideoElement | null => {
+	if (!/iPhone|iPod/i.test(navigator.userAgent)) return null;
+	const video = document.querySelector("video") as IOSVideoElement | null;
+	return video?.webkitEnterFullscreen ? video : null;
+};
+
 export const toggleFullscreen = async (set?: boolean) => {
+	const video = iosFullscreenVideo();
+	if (video) {
+		set ??= !video.webkitDisplayingFullscreen;
+		try {
+			if (set) video.webkitEnterFullscreen?.();
+			else video.webkitExitFullscreen?.();
+		} catch (e) {
+			console.error("failed to toggle fullscreen", e);
+		}
+		return;
+	}
+
 	set ??= document.fullscreenElement === null;
 	try {
 		if (set) {
@@ -87,8 +111,16 @@ export const FullscreenButton = (
 	const [fullscreen, setFullscreen] = useState(false);
 	useEffect(() => {
 		const update = () => setFullscreen(document.fullscreenElement !== null);
+		const enterIOSFullscreen = () => setFullscreen(true);
+		const exitIOSFullscreen = () => setFullscreen(false);
 		document.addEventListener("fullscreenchange", update);
-		return () => document.removeEventListener("fullscreenchange", update);
+		document.addEventListener("webkitbeginfullscreen", enterIOSFullscreen, true);
+		document.addEventListener("webkitendfullscreen", exitIOSFullscreen, true);
+		return () => {
+			document.removeEventListener("fullscreenchange", update);
+			document.removeEventListener("webkitbeginfullscreen", enterIOSFullscreen, true);
+			document.removeEventListener("webkitendfullscreen", exitIOSFullscreen, true);
+		};
 	}, []);
 
 	return (
