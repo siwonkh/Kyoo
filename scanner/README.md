@@ -1,5 +1,22 @@
 # Scanner
 
+## Network libraries
+
+Changes made through SMB on a NAS may not produce filesystem events on a
+separate NFS client. Set `SCANNER_RESCAN_INTERVAL_SECONDS=3600` in Kyoo's
+`.env` to reconcile the full library hourly. The default (`0`) keeps the
+startup scan and filesystem event monitoring without periodic scans. A manual
+full scan is also available through `PUT /scanner/scan`. Full scans register
+new videos and remove records for deleted files; ensure the library mount is
+available before enabling periodic scans.
+
+To correct old episode links after changing the identifier, use a targeted
+`PUT /scanner/scan?directory=Hunter%20x%20Hunter%20(2011)&reidentify_existing=true`.
+The directory is relative to `/video`. This re-guesses existing files and
+replaces their episode links while preserving their video IDs. Make a database
+backup before a bulk re-identification. Files copied over SMB should keep a
+temporary extension until the copy completes, then be renamed to `.mp4`.
+
 ## Workflow
 
 In order of action:

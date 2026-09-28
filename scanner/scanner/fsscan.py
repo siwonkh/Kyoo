@@ -41,7 +41,12 @@ class FsScanner:
 			logger.error(f"Invalid ignore pattern. Ignoring. Error: {e}")
 
 	@tracer.start_as_current_span("scan")
-	async def scan(self, path: str | None = None, remove_deleted=False):
+	async def scan(
+		self,
+		path: str | None = None,
+		remove_deleted: bool = False,
+		reidentify_existing: bool = False,
+	):
 		if path is None:
 			path = self._root_path
 			logger.info("Starting scan at %s. This may take some time...", path)
@@ -54,13 +59,19 @@ class FsScanner:
 
 			self._info = await self._client.get_videos_info()
 
+			known_in_scope = (
+				self._info.paths
+				if path == self._root_path
+				else {p for p in self._info.paths if p.startswith(path + os.sep)}
+			)
 			to_register = videos - self._info.paths
-			to_delete = self._info.paths - videos if remove_deleted else set()
+			to_delete = known_in_scope - videos if remove_deleted else set()
+			to_update = videos & self._info.paths if reidentify_existing else set()
 
 			if (
 				not any(to_register)
 				and any(to_delete)
-				and len(to_delete) == len(self._info.paths)
+				and len(to_delete) == len(known_in_scope)
 			):
 				logger.warning("All video files are unavailable. Check your disks.")
 				return
@@ -73,11 +84,15 @@ class FsScanner:
 			if to_register:
 				logger.info("Found %d new files to register.", len(to_register))
 				await self._register(to_register)
-			if self._info.unmatched:
+			if to_update:
+				logger.info("Re-identifying %d existing files.", len(to_update))
+				await self._register(to_update, replace_links=True)
+			unmatched = self._info.unmatched & videos
+			if unmatched and not reidentify_existing:
 				logger.info(
-					"Retrying & updating %d unmatched files.", len(self._info.unmatched)
+					"Retrying & updating %d unmatched files.", len(unmatched)
 				)
-				await self._register(self._info.unmatched)
+				await self._register(unmatched)
 
 			logger.info("Scan finished for %s.", path)
 		except Exception as e:
@@ -113,7 +128,7 @@ class FsScanner:
 			except Exception as e:
 				logger.error("Unexpected error while monitoring files.", exc_info=e)
 
-	async def _register(self, videos: list[str] | set[str]):
+	async def _register(self, videos: list[str] | set[str], replace_links=False):
 		async def process(path: str):
 			try:
 				vid = await identify(path)
@@ -124,8 +139,11 @@ class FsScanner:
 
 		for batch in itertools.batched(videos, 20):
 			vids = await asyncio.gather(*(process(path) for path in batch))
-			created = await self._client.create_videos(
-				[v for v in vids if v is not None]
+			payload = [v for v in vids if v is not None]
+			created = (
+				await self._client.replace_videos(payload)
+				if replace_links
+				else await self._client.create_videos(payload)
 			)
 
 			_ = await self._requests.enqueue(

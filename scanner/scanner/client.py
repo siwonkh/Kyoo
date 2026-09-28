@@ -75,6 +75,17 @@ class KyooClient(metaclass=Singleton):
 			await self.raise_for_status(r)
 			return TypeAdapter(list[VideoCreated]).validate_json(await r.text())
 
+	async def replace_videos(self, videos: list[Video]) -> list[VideoCreated]:
+		"""Update guesses and replace old episode links for existing paths."""
+		if len(videos) == 0:
+			return []
+		async with self._client.put(
+			"videos",
+			data=TypeAdapter(list[Video]).dump_json(videos, by_alias=True),
+		) as r:
+			await self.raise_for_status(r)
+			return TypeAdapter(list[VideoCreated]).validate_json(await r.text())
+
 	async def delete_videos(self, videos: list[str] | set[str]):
 		async with self._client.delete(
 			"videos",
