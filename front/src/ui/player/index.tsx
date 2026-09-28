@@ -333,6 +333,8 @@ const PlayerContent = ({
 
 	useEffect(() => {
 		if (Platform.OS !== "web") return;
+		// iPhone video fullscreen must start from a user gesture.
+		if (/iPhone|iPod/i.test(window.navigator.userAgent)) return;
 		if (/Mobi/i.test(window.navigator.userAgent)) toggleFullscreen(true);
 		return () => {
 			if (!document.location.href.includes("/watch")) toggleFullscreen(false);
