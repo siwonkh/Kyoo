@@ -185,6 +185,30 @@ def anidb_to_tvdb(
 	return (anime.defaulttvdbseason, [anidb_ep + anime.episodeoffset])
 
 
+def is_tvdb_season_episode(
+	anime: AnimeListDb.AnimeEntry, season: int | None, episode: int
+) -> bool:
+	"""Check whether an explicit SxxEyy fits a mapped TVDB season."""
+	if season is None or season < 1 or episode < 1:
+		return False
+	for mapping in anime.mappings:
+		if mapping.anidbseason != 1 or mapping.tvdbseason != season:
+			continue
+		if episode in (
+			tvdb_ep
+			for tvdb_eps in mapping.tvdb_mappings.values()
+			for tvdb_ep in tvdb_eps
+		):
+			return True
+		if (
+			mapping.start is not None
+			and mapping.end is not None
+			and mapping.start + mapping.offset <= episode <= mapping.end + mapping.offset
+		):
+			return True
+	return False
+
+
 def tvdb_to_anidb(
 	animes: list[AnimeListDb.AnimeEntry],
 	tvdb_season: int,
@@ -279,6 +303,13 @@ async def identify_anilist(_path: str, guess: Guess) -> Guess:
 
 	new_episodes: list[Guess.Episode] = []
 	for ep in guess.episodes:
+		# "a" means the anime list uses absolute AniDB episode numbers. A
+		# filename with a valid TVDB SxxEyy already has season-relative numbers.
+		if anime.defaulttvdbseason == "a" and is_tvdb_season_episode(
+			anime, ep.season, ep.episode
+		):
+			new_episodes.append(ep)
+			continue
 		if (
 			anime.tvdbid is None
 			or anime.defaulttvdbseason is None
