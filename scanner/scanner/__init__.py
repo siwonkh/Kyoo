@@ -1,7 +1,5 @@
-import os
 from asyncio import CancelledError, TaskGroup, create_task, sleep
 from contextlib import asynccontextmanager
-from logging import getLogger
 from types import CoroutineType
 from typing import Any
 
@@ -24,20 +22,6 @@ from .routers.routes import router
 
 MASTER_LOCK_ID = 198347
 HTTP_LOCK_ID = 645633
-logger = getLogger(__name__)
-
-
-def rescan_interval() -> int:
-	value = os.environ.get("SCANNER_RESCAN_INTERVAL_SECONDS", "0")
-	try:
-		interval = int(value)
-	except ValueError:
-		logger.warning("Invalid SCANNER_RESCAN_INTERVAL_SECONDS: %s", value)
-		return 0
-	if interval < 0:
-		logger.warning("SCANNER_RESCAN_INTERVAL_SECONDS must be non-negative")
-		return 0
-	return interval
 
 
 @asynccontextmanager
@@ -93,17 +77,6 @@ async def background_startup(
 		await sleep(30)
 		await task
 
-	async def reconcile_files():
-		# Network filesystem changes made by another client may not emit local
-		# file events. Periodically compare the full library with Kyoo's records.
-		await sleep(30)
-		interval = rescan_interval()
-		while True:
-			await scanner.scan(remove_deleted=True)
-			if interval == 0:
-				return
-			await sleep(interval)
-
 	async def leader_worker(tg: TaskGroup):
 		nonlocal is_master
 		while not is_master:
@@ -113,7 +86,7 @@ async def background_startup(
 			)
 
 		_ = tg.create_task(scanner.monitor())
-		_ = tg.create_task(reconcile_files())
+		_ = tg.create_task(delay(scanner.scan(remove_deleted=True)))
 		_ = tg.create_task(delay(refresh.monitor()))
 
 	async with TaskGroup() as tg:

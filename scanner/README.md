@@ -3,12 +3,12 @@
 ## Network libraries
 
 Changes made through SMB on a NAS may not produce filesystem events on a
-separate NFS client. Set `SCANNER_RESCAN_INTERVAL_SECONDS=3600` in Kyoo's
-`.env` to reconcile the full library hourly. The default (`0`) keeps the
-startup scan and filesystem event monitoring without periodic scans. A manual
-full scan is also available through `PUT /scanner/scan`. Full scans register
-new videos and remove records for deleted files; ensure the library mount is
-available before enabling periodic scans.
+separate NFS client. A watcher on the NAS itself can observe local writes and
+request a targeted scan after a short debounce, so idle disks are not woken
+by periodic scans. The NAS watcher needs authorization to call
+`PUT /scanner/scan?directory=<relative directory>`. This endpoint registers
+new videos and removes records for deleted files within that directory.
+Verify that the NFS mount is available before sending a scan request.
 
 To correct old episode links after changing the identifier, use a targeted
 `PUT /scanner/scan?directory=Hunter%20x%20Hunter%20(2011)&reidentify_existing=true`.
