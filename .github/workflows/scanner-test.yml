@@ -1,0 +1,27 @@
+name: Scanner Tests
+on:
+  pull_request:
+    paths:
+      - "scanner/**"
+      - ".github/workflows/scanner-test.yml"
+  push:
+    branches:
+      - master
+      - next
+    paths:
+      - "scanner/**"
+      - ".github/workflows/scanner-test.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test scanner
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./scanner
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - name: Test provider regressions
+        run: uv run --locked python -m unittest discover -s tests -v
