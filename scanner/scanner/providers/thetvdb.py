@@ -459,13 +459,20 @@ class TVDB(Provider):
 	async def get_seasons(self, season_id: str | int) -> Season:
 		info = (await self._get(f"seasons/{season_id}/extended"))["data"]
 
-		async def get_translation(lang: str) -> SeasonTranslation:
-			data = (
-				await self._get(
-					f"seasons/{season_id}/translations/{lang}",
-					not_found_fail="Season translation not found",
+		async def get_translation(lang: str) -> SeasonTranslation | None:
+			try:
+				data = (await self._get(f"seasons/{season_id}/translations/{lang}"))[
+					"data"
+				]
+			except ClientResponseError as e:
+				if e.status != 404:
+					raise
+				logger.warning(
+					"Skipping missing TVDB season translation (season=%s, language=%s)",
+					season_id,
+					lang,
 				)
-			)["data"]
+				return None
 			return SeasonTranslation(
 				name=data.get("name"),
 				description=data.get("overview"),
@@ -503,7 +510,11 @@ class TVDB(Provider):
 					)
 				],
 			},
-			translations={Language.get(lang): tl for lang, tl in zip(languages, trans)},
+			translations={
+				Language.get(lang): tl
+				for lang, tl in zip(languages, trans)
+				if tl is not None
+			},
 			extra={},
 		)
 
