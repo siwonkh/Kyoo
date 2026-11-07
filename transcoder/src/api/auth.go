@@ -29,6 +29,9 @@ func RequirePermission(permission string) echo.MiddlewareFunc {
 			if !ok {
 				return echo.NewHTTPError(http.StatusForbidden, "invalid jwt claims")
 			}
+			if permission == "core.play" && claims["verified"] != true {
+				return echo.NewHTTPError(http.StatusForbidden, "user is not verified")
+			}
 			permissions, ok := claims["permissions"]
 			if !ok {
 				return echo.NewHTTPError(http.StatusForbidden, "missing permissions claim")

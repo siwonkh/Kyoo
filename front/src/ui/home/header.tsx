@@ -1,9 +1,10 @@
+import { showListParams } from "~/query/show-list";
 import Info from "@material-symbols/svg-400/rounded/info.svg";
 import PlayArrow from "@material-symbols/svg-400/rounded/play_arrow-fill.svg";
 import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, View } from "react-native";
-import { Show } from "~/models";
+import { Paged, Show } from "~/models";
 import {
 	H1,
 	H2,
@@ -87,10 +88,13 @@ export const Header = ({
 	);
 };
 
-Header.query = (): QueryIdentifier<Show> => ({
-	parser: Show,
-	path: ["api", "shows", "random"],
+Header.query = (): QueryIdentifier<Show | null> => ({
+	parser: Paged(Show).transform((page) => page.items[0] ?? null),
+	path: ["api", "shows"],
 	params: {
+		...showListParams(),
+		sort: "random",
+		limit: 1,
 		with: ["firstEntry"],
 	},
 });

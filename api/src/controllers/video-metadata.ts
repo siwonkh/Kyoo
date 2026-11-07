@@ -10,6 +10,8 @@ import { isUuid } from "~/models/utils";
 import { Video } from "~/models/video";
 import { toQueryStr } from "~/utils";
 
+import { readPreparationResponse } from "./prepare-response";
+
 const logger = getLogger();
 
 export const videosMetadata = new Elysia({
@@ -197,7 +199,7 @@ export const videosMetadata = new Elysia({
 		async ({ params: { id }, headers: { authorization }, status }) => {
 			const ret = await prepareVideo(id, authorization!);
 			if ("kyoo" in ret) return status(ret.status, ret as any);
-			return { status: ret.status, body: await ret.json() };
+			return await readPreparationResponse(ret);
 		},
 		{
 			detail: { description: "Prepare a video for playback" },

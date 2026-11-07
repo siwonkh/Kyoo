@@ -1,9 +1,12 @@
+import os
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import (
 	APIRouter,
 	BackgroundTasks,
 	Depends,
+	HTTPException,
 	Security,
 )
 from fastapi import (
@@ -57,14 +60,25 @@ async def get_scan_status(
 async def trigger_scan(
 	tasks: BackgroundTasks,
 	_: Annotated[None, Security(validate_bearer, scopes=["scanner.trigger"])],
+	directory: str | None = None,
+	reidentify_existing: bool = False,
 ):
 	"""
 	Trigger a full scan of the filesystem, trying to find new videos & deleting old ones.
 	"""
 
+	root = Path(os.environ.get("SCANNER_LIBRARY_ROOT", "/video")).resolve()
+	path = (root / directory).resolve() if directory else root
+	if not path.is_relative_to(root) or not path.is_dir():
+		raise HTTPException(400, "Directory must exist inside the library root")
+
 	async def run():
 		async with create_scanner() as scanner:
-			await scanner.scan()
+			await scanner.scan(
+				path=str(path),
+				remove_deleted=True,
+				reidentify_existing=reidentify_existing,
+			)
 
 	tasks.add_task(run)
 

@@ -1,3 +1,4 @@
+import { showListParams } from "~/query/show-list";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { ItemDetails } from "~/components/items/item-details";
@@ -78,6 +79,7 @@ Recommended.query = (): QueryIdentifier<Show> => ({
 	infinite: true,
 	path: ["api", "shows"],
 	params: {
+		...showListParams(),
 		sort: "random",
 		limit: itemCount,
 		with: ["firstEntry"],

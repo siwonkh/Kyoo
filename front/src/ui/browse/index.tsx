@@ -1,3 +1,4 @@
+import { showListParams } from "~/query/show-list";
 import { ItemGrid, ItemList, itemMap } from "~/components/items";
 import { Show } from "~/models";
 import { useAccount } from "~/providers/account-context";
@@ -9,7 +10,7 @@ import type { SortBy, SortOrd } from "./types";
 export const BrowsePage = () => {
 	const account = useAccount();
 	const showCollectionItems =
-		account?.claims.settings.showCollectionItems ?? false;
+		account?.claims.settings.showCollectionItems ?? true;
 	const [filter, setFilter] = useQueryState("filter", "");
 	const [sort, setSort] = useQueryState("sort", "name");
 	const [search] = useQueryState("q", "");
@@ -71,9 +72,9 @@ BrowsePage.query = ({
 			sort: sortBy
 				? `${sortOrd === "desc" ? "-" : ""}${sortBy === "rating" ? "rating:themoviedatabase" : sortBy}`
 				: "name",
-			filter,
+			...(showCollectionItems ? showListParams(filter) : { filter }),
 			query: search,
-			// The api hides collection members by default; only send the param to opt out.
+			// Keep the existing individual-title policy while honoring the new account setting.
 			ignoreInCollection: showCollectionItems ? false : undefined,
 		},
 	};

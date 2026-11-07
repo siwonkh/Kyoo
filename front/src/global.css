@@ -91,3 +91,21 @@
 		-1px 1px 0 #000,
 		1px 1px 0 #000;
 }
+
+/* Keep the browser canvas themed while mobile toolbars resize the viewport. */
+html,
+body,
+#root {
+	background-color: var(--color-background);
+}
+
+#root {
+	min-height: 0;
+	overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+	#root {
+		height: 100dvh;
+	}
+}

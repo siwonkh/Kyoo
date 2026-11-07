@@ -1,3 +1,4 @@
+import { useCSSVariable } from "uniwind";
 import { type ComponentProps, useDeferredValue, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, View } from "react-native";
@@ -144,6 +145,7 @@ export const SerieDetails = () => {
 	const [season] = useQueryState("season", undefined!);
 	const [search] = useQueryState("search", "");
 	const insets = useSafeAreaInsets();
+	const card = useCSSVariable("--color-card") as string;
 	const { scrollHandler, headerProps, headerHeight } = useScrollNavbar({
 		imageHeight: useHeroHeight(),
 	});
@@ -167,6 +169,7 @@ export const SerieDetails = () => {
 						/>
 					)}
 					contentContainerStyle={{ paddingBottom: insets.bottom }}
+					style={{ flex: 1, backgroundColor: card }}
 					withContainer
 					onScroll={scrollHandler}
 					scrollEventThrottle={16}

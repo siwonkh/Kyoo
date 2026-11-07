@@ -1,3 +1,4 @@
+import { showListParams } from "~/query/show-list";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { ItemList, itemMap } from "~/components/items";
@@ -28,6 +29,7 @@ VerticalRecommended.query = (): QueryIdentifier<Show> => ({
 	infinite: true,
 	path: ["api", "shows"],
 	params: {
+		...showListParams(),
 		sort: "random",
 		limit: 3,
 	},

@@ -1,4 +1,4 @@
-from asyncio import CancelledError, Event, TaskGroup
+from asyncio import CancelledError, Event, TaskGroup, wait_for
 from logging import getLogger
 from traceback import TracebackException
 
@@ -14,6 +14,7 @@ from .providers.provider import Provider, ProviderError
 
 logger = getLogger(__name__)
 tracer = trace.get_tracer("kyoo.scanner")
+REQUEST_POLL_INTERVAL = 60
 
 
 class RequestCreator:
@@ -27,7 +28,10 @@ class RequestCreator:
 				values ($1, $2, $3, $4, $5)
 			on conflict (kind, title, year)
 				do update set
-					videos = requests.videos || excluded.videos
+					videos = (
+						select coalesce(jsonb_agg(distinct video), '[]'::jsonb)
+						from jsonb_array_elements(requests.videos || excluded.videos) as video
+					)
 			returning
 				pk::text as id
 			""",
@@ -90,7 +94,14 @@ class RequestProcessor:
 					await self._database.add_listener("scanner_requests", process)
 
 					logger.info("Listening for requests")
-					_ = await closed.wait()
+					# Notifications wake new work immediately. Also resume pending work
+					# on reconnect and periodically reclaim expired running requests.
+					await self.process_all()
+					while not closed.is_set():
+						try:
+							_ = await wait_for(closed.wait(), REQUEST_POLL_INTERVAL)
+						except TimeoutError:
+							await self.process_all()
 					logger.info("stopping...")
 				except CancelledError:
 					logger.info("Stopped listening for requsets")
@@ -111,6 +122,7 @@ class RequestProcessor:
 					logger.error(
 						"Failed to process one of the metadata request", exc_info=e
 					)
+					break  # Retry after the next notification or periodic poll.
 		finally:
 			self._processing = False
 
@@ -118,13 +130,7 @@ class RequestProcessor:
 	async def process_request(self):
 		cur = await self._database.fetchrow(
 			"""
-			update
-				scanner.requests
-			set
-				status = 'running',
-				started_at = now()::timestamptz
-			where
-				pk in (
+			with candidate as materialized (
 					select
 						pk
 					from
@@ -135,11 +141,19 @@ class RequestProcessor:
 							status = 'running'
 							and now() - started_at > interval '30 minutes'
 						)
+					order by pk
 					limit 1
 					for update
-						skip locked)
+						skip locked
+			)
+			update scanner.requests as request
+			set
+				status = 'running',
+				started_at = now()::timestamptz
+			from candidate
+			where request.pk = candidate.pk
 			returning
-				*
+				request.*
 			"""
 		)
 		if cur is None:

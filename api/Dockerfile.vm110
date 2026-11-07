@@ -1,0 +1,20 @@
+FROM oven/bun:debian AS builder
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY patches patches
+RUN bun install --frozen-lockfile
+COPY src src
+COPY drizzle drizzle
+COPY tests tests
+COPY tsconfig.json .
+RUN bun run typecheck && bun test tests/prepare-response.test.mjs
+ENV NODE_ENV=production
+RUN bun build --compile --compile-autoload-package-json --minify-whitespace --minify-syntax --target bun --outfile server ./src/index.ts
+
+FROM ghcr.io/zoriya/kyoo_api:5.3.0@sha256:719cca5a5817fc16e9a78f0738d4cbbe1db8ac4d71c1c4ac123d52f2bcb12373
+ARG SOURCE_REVISION
+LABEL org.opencontainers.image.source="https://github.com/siwonkh/Kyoo" org.opencontainers.image.revision=$SOURCE_REVISION com.siwonkh.kyoo.upstream="v5.3.0"
+COPY --from=builder /app/server /app/server
+COPY --from=builder /app/node_modules/@img /app/node_modules/@img
+COPY drizzle /app/drizzle
+

@@ -1,0 +1,15 @@
+FROM ghcr.io/zoriya/ffmpeg:v8.0.4-dev AS build
+COPY --from=golang:1.27 /usr/local/go /usr/local/go
+ENV PATH="/usr/local/go/bin:${PATH}"
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN gofmt -w src/api/auth.go src/api/auth_verified_test.go && go test ./src/api -run TestPlaybackRequiresVerifiedUser -v && GOOS=linux go build -o ./transcoder
+
+FROM ghcr.io/zoriya/kyoo_transcoder:5.3.0@sha256:1171f5001e10a082db3da7e12f4b9ac958feb1e51d9a4a62a392c50a3e2fab4b
+ARG SOURCE_REVISION
+LABEL org.opencontainers.image.source="https://github.com/siwonkh/Kyoo" org.opencontainers.image.revision=$SOURCE_REVISION com.siwonkh.kyoo.upstream="v5.3.0" com.siwonkh.kyoo.chapter-policy="official-default"
+COPY --from=build /app/transcoder /app/transcoder
+COPY migrations /app/migrations
+

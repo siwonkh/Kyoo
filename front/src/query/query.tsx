@@ -16,6 +16,7 @@ import { type KyooError, type Page, Paged } from "~/models";
 import { RetryableError } from "~/models/retryable-error";
 import { AccountContext } from "~/providers/account-context";
 import { setServerData } from "~/utils";
+import { normalizePaginationUrl } from "./pagination-url";
 
 const ssrApiUrl = process.env.KYOO_URL ?? "http://api:3567/api";
 
@@ -268,7 +269,11 @@ export const useInfiniteFetch = <Data,>(query: QueryIdentifier<Data>) => {
 		queryKey: key,
 		queryFn: (ctx) =>
 			queryFn({
-				url: (ctx.pageParam as string) ?? keyToUrl(key),
+				url: normalizePaginationUrl(
+					(ctx.pageParam as string) ?? keyToUrl(key),
+					Platform.OS === "web" && typeof window !== "undefined"
+						? window.location.href : undefined,
+				),
 				parser: query.parser ? Paged(query.parser) : null,
 				signal: ctx.signal,
 				authToken: authToken ?? null,

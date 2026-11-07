@@ -1,3 +1,4 @@
+import { showListParams } from "~/query/show-list";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -43,7 +44,7 @@ GenreGrid.query = (genre: Genre): QueryIdentifier<Show> => ({
 	infinite: true,
 	path: ["api", "shows"],
 	params: {
-		filter: `genres has ${genre}`,
+		...showListParams(`genres has ${genre}`),
 		sort: "random",
 		// Limit the initial numbers of items
 		limit: 10,
